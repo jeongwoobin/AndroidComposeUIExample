@@ -15,24 +15,32 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.rounded.AttachMoney
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dagger.hilt.android.AndroidEntryPoint
+import kr.co.petdoc.composeexample.ui.components.InputField
 import kr.co.petdoc.composeexample.ui.theme.ComposeExampleTheme
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @ExperimentalComposeUiApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -44,6 +52,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@ExperimentalComposeUiApi
 @Preview(showBackground = true)
 @Composable
 fun PreviewMyApp() {
@@ -52,6 +61,7 @@ fun PreviewMyApp() {
     }
 }
 
+@ExperimentalComposeUiApi
 @Composable
 fun MyApp() {
     Surface(
@@ -60,7 +70,7 @@ fun MyApp() {
             .padding(6.dp),
         color = Color.White
     ) {
-        var tab = remember { mutableStateOf(100) }
+        val tab = remember { mutableStateOf(100) }
         Column {
             Row(modifier = Modifier.height(IntrinsicSize.Min)) {
                 Button(onClick = {
@@ -92,6 +102,7 @@ fun MyApp() {
 
 
 // TipCalculator ------------------------------------------------------------------------------------------------------------------------------------
+@ExperimentalComposeUiApi
 @Composable
 fun TipCalculator() {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -120,36 +131,83 @@ fun TopHeader(totalPerPerson: Double = 0.0) {
     }
 }
 
-@Composable
-fun InputField(
-    modifier: Modifier = Modifier,
-    valueState: MutableState<String>,
-    labelId: String,
-    enabled: Boolean,
-    isSingleLine: Boolean,
-    keyboardType: KeyboardType = KeyboardType.Number,
-    imeAction: ImeAction = ImeAction.Next,
-    onAction: KeyboardActions = KeyboardActions.Default
-) {
-    OutlinedTextField(value = valueState.value, onValueChange = { valueState.value = it }, label = { Text(labelId) }, leadingIcon = { Icon(imageVector = Icons.Rounded.AttachMoney, contentDescription = "Money Icon")},
-    singleLine = isSingleLine,
-    textStyle = TextStyle(fontSize = 18.sp, color = MaterialTheme.colors.onBackground),
-    modifier = modifier.padding(bottom = 10.dp, start = 10.dp, end = 10.dp),
-    enabled = enabled,
-    keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
-    keyboardActions = onAction)
-}
-
+@ExperimentalComposeUiApi
 @Composable
 fun TipContent() {
-    Surface(modifier = Modifier
+    BillForm { billAmt ->
+        Log.d("AMT", "TipContent: $billAmt")
+    }
+}
+
+@ExperimentalComposeUiApi
+@Composable
+fun BillForm(modifier: Modifier = Modifier, onValChange: (String) -> Unit = {}) {
+    val totalBillState = remember {
+        mutableStateOf("")
+    }
+    val validState = remember(totalBillState.value) {
+        totalBillState.value.trim().isNotEmpty()
+    }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    Surface(modifier = modifier
         .padding(2.dp)
-        .fillMaxWidth(), shape = RoundedCornerShape(corner = CornerSize(8.dp)), border = BorderStroke(width = 1.dp, color = Color.LightGray)) {
-        Column() {
-            Text("Hello again1")
-            Text("Hello again2")
-            Text("Hello again3")
+        .fillMaxWidth(),
+        shape = RoundedCornerShape(corner = CornerSize(8.dp)),
+        border = BorderStroke(width = 1.dp, color = Color.LightGray)) {
+        Column {
+            InputField(
+                valueState = totalBillState,
+                labelId = "Enter Bill",
+                enabled = true,
+                isSingleLine = true,
+                onAction = KeyboardActions {
+                    if (!validState) return@KeyboardActions
+                    onValChange(totalBillState.value.trim())
+                    keyboardController?.hide()
+                }
+            )
+            if (validState) {
+                Row(modifier = Modifier.padding(3.dp),
+                    horizontalArrangement = Arrangement.Start) {
+                    Text("Split", modifier = Modifier.align(alignment = Alignment.CenterVertically))
+                    Spacer(modifier = Modifier.width(120.dp))
+                    Row(modifier = Modifier.padding(horizontal = 3.dp),
+                        horizontalArrangement = Arrangement.End) {
+                        RoundIconButtons(imageVector = Icons.Default.Remove,
+                            onClick = {})
+                        Text("2",
+                            modifier = Modifier.align(Alignment.CenterVertically)
+                                .padding(horizontal = 9.dp))
+                        RoundIconButtons(imageVector = Icons.Default.Add, onClick = {})
+                    }
+                }
+                Row {
+                    Text("Tip", modifier = Modifier.align(alignment = Alignment.CenterVertically))
+                    Spacer(modifier = Modifier.width(200.dp))
+                    Text("$33.00", modifier = Modifier.align(alignment = Alignment.CenterVertically))
+                }
+            } else {
+                Box() {}
+            }
         }
+    }
+}
+
+val IconbuttonSizeModifier = Modifier.size(40.dp)
+@Composable
+fun RoundIconButtons(modifier: Modifier = Modifier,
+imageVector: ImageVector,
+onClick: () -> Unit,
+tint: Color = Color.Black.copy(alpha = 0.8f),
+backgroundColor: Color = MaterialTheme.colors.background,
+elevation: Dp = 4.dp ) {
+    Card(modifier = modifier.padding(4.dp).clickable { onClick.invoke() }
+        .then(IconbuttonSizeModifier),
+        shape = CircleShape,
+        backgroundColor = backgroundColor,
+        elevation = elevation) {
+        Icon(imageVector = imageVector, contentDescription = "Plus or Minus icon",
+            tint = tint)
     }
 }
 
@@ -161,7 +219,7 @@ fun TipContent() {
 // TapMoney ------------------------------------------------------------------------------------------------------------------------------------
 @Composable
 fun TapMoney() {
-    var moneyCounter = remember { mutableStateOf(0) }
+    val moneyCounter = remember { mutableStateOf(0) }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, modifier = Modifier
         .fillMaxWidth()
@@ -188,7 +246,7 @@ fun CreateCircle(moneyCounter: Int = 0, updateMoneyCounter: (Int) -> Unit) {
         shape = CircleShape
     ) {
         Box(contentAlignment = Alignment.Center,
-        modifier = Modifier.background(color = Color.Black)) {
+            modifier = Modifier.background(color = Color.Black)) {
             Text(text = "Tap $moneyCounter", modifier = Modifier, color = Color.White)
         }
     }
